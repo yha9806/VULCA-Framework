@@ -13,7 +13,7 @@ tags:
 
 📄 **Paper**: Cross-Cultural Expert-Level Art Critique Evaluation with Vision-Language Models (ACL 2026)
 
-🔗 **Related**: [VULCA-Bench Dataset](https://github.com/yha9806/VULCA-Bench) | [HuggingFace Dataset](https://huggingface.co/datasets/yhryzy/vulca-bench)
+🔗 **Related**: [VULCA-Bench Dataset](https://github.com/yha9806/VULCA-Bench) | [HuggingFace Dataset](https://huggingface.co/datasets/harryHURRY/vulca-bench)
 
 ## Framework Overview
 
@@ -24,20 +24,20 @@ tags:
 │                    Tier I: Automated Metrics                │
 │   DCR (Dimension Coverage) + CSA (Cultural Alignment) +    │
 │   CDS (Critique Depth) + LQS (Linguistic Quality)          │
-│                      Weight: 40%                            │
+│                  (Risk indicators, not primary score)       │
 └─────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────┐
 │                  Tier II: LLM-as-Judge                      │
-│   Single Primary Judge (Claude-Opus-4.5) with 10-item      │
-│   Rubric-based Checklist across L1-L5 layers               │
-│                      Weight: 60%                            │
+│   Single Primary Judge (Claude-Opus-4.5) with 5-dimension  │
+│   rubric (Coverage, Alignment, Depth, Accuracy, Quality)   │
+│                   (Primary evaluation score)                │
 └─────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────┐
 │                Tier III: Human Calibration                  │
-│   Isotonic Regression calibration to human ratings         │
-│   Yields 5.2% MAE reduction on held-out set                │
+│   Sigmoid calibration to human ratings (n=450)             │
+│   Yields 1.7% MAE reduction on held-out set (n=155)       │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -135,7 +135,7 @@ VULCA-Framework/
 │   ├── run_ablation.py          # Ablation experiments
 │   └── analyze_results.py       # Results analysis
 ├── data/
-│   ├── human_annotations.json   # 152 human-rated samples
+│   ├── human_annotations.json   # 450 human-rated samples
 │   └── calibration_params.json  # Pre-trained calibration
 ├── examples/
 │   └── quick_start.py
@@ -147,7 +147,7 @@ VULCA-Framework/
 ```bibtex
 @inproceedings{yu2026vulcaframework,
   title={Cross-Cultural Expert-Level Art Critique Evaluation with Vision-Language Models},
-  author={Yu, Haorui and Ruiz-Dolz, Ramon and Wen, Xuehang and Zhang, Fengrui and Yi, Qiufeng},
+  author={Yu, Haorui and Wen, Xuehang and Zhang, Fengrui and Yi, Qiufeng},
   booktitle={Proceedings of the 64th Annual Meeting of the Association for Computational Linguistics (ACL)},
   year={2026}
 }
