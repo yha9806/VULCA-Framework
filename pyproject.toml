@@ -31,7 +31,7 @@ all = [
 
 [project.urls]
 Paper = "https://arxiv.org/abs/2601.07984"
-Repository = "https://github.com/yha9806/VULCA-Framework"
+Repository = "https://github.com/vulca-org/vulca-cultural-evaluation-framework"
 
 [tool.setuptools.packages.find]
 include = ["vulca_framework*"]
