@@ -1,10 +1,12 @@
 """
 VULCA-Framework Quick Start Example
-Demonstrates the tri-tier evaluation framework.
+Demonstrates the uncalibrated public prototype.
 """
 
 import sys
-sys.path.append('..')
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from vulca_framework import TriLayerEvaluator
 
@@ -63,6 +65,9 @@ def main():
     print("--- Structured Result ---")
     result_dict = result.to_dict()
     print(f"Final Score: {result_dict['final_score']:.1%}")
+    print(f"Score kind: {result_dict['score_kind']}")
+    print(f"Judge backend: {result_dict['judge_backend']}")
+    print(f"Judge model: {result_dict['judge_model_name']}")
     print(f"Layer 1 (Automated): {result_dict['layer1_score']:.1%}")
     print(f"Layer 2 (Checklist): {result_dict['layer2_score']:.1%}")
     print()

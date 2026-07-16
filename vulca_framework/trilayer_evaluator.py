@@ -1,5 +1,5 @@
 """
-trilayer_evaluator.py - VULCA Tri-Layer Pyramid Evaluation Framework v2.0
+Legacy-named orchestration module for the public VULCA evaluation prototype.
 
 Integrates Layer 1 (Automated Metrics) and Layer 2 (Checklist Judge) into
 a unified evaluation pipeline with support for Mode A (reference-based) and
@@ -8,7 +8,7 @@ Mode B (reference-free).
 Final Score = Layer1 (40%) + Layer2 (60%)
 
 Usage:
-    from scripts.evaluation.trilayer_evaluator import TriLayerEvaluator
+    from vulca_framework import TriLayerEvaluator
 
     evaluator = TriLayerEvaluator(culture='chinese')
 
@@ -29,8 +29,8 @@ Usage:
 
     print(f"Final Score: {result.final_score:.2f}")
 
-Author: Claude Code
-Version: 1.0 (2025-11-29)
+Author: VULCA Project Team
+Version: 0.1.0
 """
 
 import json
@@ -56,7 +56,7 @@ except ImportError:
 
 @dataclass
 class TriLayerResult:
-    """Complete evaluation result from Tri-Layer framework."""
+    """Uncalibrated result from the public research prototype."""
 
     # Scores
     layer1_score: float  # 0-1
@@ -86,6 +86,10 @@ class TriLayerResult:
             'layer2_answers': self.layer2_result.answers,
             'layer2_yes_count': self.layer2_result.yes_count,
             'layer2_no_count': self.layer2_result.no_count,
+            'judge_backend': self.layer2_result.judge_backend,
+            'judge_model_name': self.layer2_result.judge_model_name,
+            'calibrated': False,
+            'score_kind': 'experimental_uncalibrated_composite',
             'mode': self.mode,
             'culture': self.culture,
             'weights': {
@@ -127,11 +131,15 @@ class TriLayerResult:
 
 class TriLayerEvaluator:
     """
-    Tri-Layer Pyramid Evaluation Framework.
+    Public, uncalibrated evaluation prototype.
 
-    Combines:
+    The current implementation combines:
     - Layer 1: Automated metrics (40% weight)
     - Layer 2: LLM checklist judge (60% weight)
+
+    Tier III sigmoid calibration described in the paper is not included in
+    this public package. ``final_score`` must not be reported as the paper's
+    calibrated score.
 
     Supports:
     - Mode A: Reference-based (requires expert critique)
@@ -144,10 +152,11 @@ class TriLayerEvaluator:
         layer1_weight: float = 0.4,
         layer2_weight: float = 0.6,
         keywords_dir: str = None,
-        judge_model: str = 'claude'
+        judge_model: str = 'claude',
+        judge_model_name: str = None
     ):
         """
-        Initialize Tri-Layer evaluator.
+        Initialize the uncalibrated public evaluator.
 
         Args:
             culture: Culture name (chinese, western, japanese, korean, islamic, indian)
@@ -155,6 +164,7 @@ class TriLayerEvaluator:
             layer2_weight: Weight for Layer 2 (default: 0.6)
             keywords_dir: Path to dimension keywords directory
             judge_model: LLM to use for Layer 2 ('claude', 'gpt5', or 'fallback')
+            judge_model_name: Provider model identifier override
         """
         self.culture = culture.lower()
         self.layer1_weight = layer1_weight
@@ -162,7 +172,7 @@ class TriLayerEvaluator:
 
         # Initialize components
         self.layer1 = AutomatedMetrics(culture, keywords_dir)
-        self.layer2 = ChecklistJudge(judge_model)
+        self.layer2 = ChecklistJudge(judge_model, model_name=judge_model_name)
 
     def evaluate(
         self,
@@ -173,7 +183,7 @@ class TriLayerEvaluator:
         mode: str = 'A'
     ) -> TriLayerResult:
         """
-        Perform complete Tri-Layer evaluation.
+        Perform the public Tier I + Tier II evaluation.
 
         Args:
             vlm_critique: VLM-generated critique text
@@ -335,7 +345,9 @@ def evaluate_critique(
     expert_critique: str = None,
     expert_dimensions: List[str] = None,
     artwork_info: str = None,
-    mode: str = 'A'
+    mode: str = 'A',
+    judge_model: str = 'claude',
+    judge_model_name: str = None
 ) -> TriLayerResult:
     """
     Convenience function for single critique evaluation.
@@ -347,11 +359,17 @@ def evaluate_critique(
         expert_dimensions: Expert dimensions (Mode A)
         artwork_info: Artwork info (Mode B)
         mode: 'A' or 'B'
+        judge_model: Judge backend ('claude', 'gpt5', or 'fallback')
+        judge_model_name: Provider model identifier override
 
     Returns:
         TriLayerResult
     """
-    evaluator = TriLayerEvaluator(culture)
+    evaluator = TriLayerEvaluator(
+        culture,
+        judge_model=judge_model,
+        judge_model_name=judge_model_name,
+    )
     return evaluator.evaluate(
         vlm_critique=vlm_critique,
         expert_critique=expert_critique,

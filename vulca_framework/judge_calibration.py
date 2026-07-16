@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""
-Judge-Human Calibration Module (A1)
-===================================
-Implements isotonic regression calibration to align judge scores with human expert scores.
+"""Legacy isotonic-calibration experiment.
 
-Part of: strengthen-acl-submission-robustness OpenSpec change
+This module is retained for research provenance and is not imported by the
+public package or integrated into :class:`TriLayerEvaluator`. The paper's v3
+method uses aggregate sigmoid calibration; this file must not be used to claim
+reproduction of that result.
 """
 
 import json
