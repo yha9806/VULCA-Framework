@@ -10,7 +10,7 @@ Implements 6 automated metrics for Tri-Layer Pyramid evaluation:
 - LAR: Layer Analysis Richness (Both modes)
 
 Usage:
-    from scripts.evaluation.automated_metrics import AutomatedMetrics
+    from vulca_framework import AutomatedMetrics
 
     metrics = AutomatedMetrics(culture='chinese')
 
@@ -20,8 +20,8 @@ Usage:
     # Mode B (reference-free)
     scores_b = metrics.compute_all(vlm_critique, mode='B')
 
-Author: Claude Code
-Version: 1.0 (2025-11-29)
+Author: VULCA Project Team
+Version: 0.1.0
 """
 
 import json
@@ -73,7 +73,7 @@ class AutomatedMetrics:
 
         # Load keywords
         if keywords_dir is None:
-            keywords_dir = Path(__file__).parent.parent.parent / 'dimension_keywords'
+            keywords_dir = Path(__file__).parent / 'dimension_keywords'
         else:
             keywords_dir = Path(keywords_dir)
 

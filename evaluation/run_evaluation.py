@@ -1,6 +1,6 @@
 """
 VULCA-Framework Batch Evaluation Runner
-Evaluates VLM-generated critiques using the tri-tier framework.
+Evaluates VLM-generated critiques using the uncalibrated public prototype.
 
 Usage:
     python run_evaluation.py --input critiques.jsonl --output results/ --judge claude
@@ -50,11 +50,13 @@ def save_results(results, output_dir: str, model_name: str = "evaluation"):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="VULCA-Framework Batch Evaluation")
+    parser = argparse.ArgumentParser(description="VULCA uncalibrated prototype evaluation")
     parser.add_argument("--input", type=str, required=True, help="Input JSONL file with VLM critiques")
     parser.add_argument("--output", type=str, default="results/", help="Output directory")
     parser.add_argument("--judge", type=str, default="claude", choices=["claude", "gpt5", "fallback"],
                         help="Judge model for Tier II")
+    parser.add_argument("--judge-model-name", type=str,
+                        help="Provider model identifier override")
     parser.add_argument("--culture", type=str, default="chinese",
                         help="Culture for evaluation (chinese, western, japanese, korean, islamic, indian)")
     parser.add_argument("--mode", type=str, default="A", choices=["A", "B"],
@@ -65,6 +67,8 @@ def main():
     print(f"=== VULCA-Framework Batch Evaluation ===")
     print(f"Input: {args.input}")
     print(f"Judge: {args.judge}")
+    if args.judge_model_name:
+        print(f"Judge model name: {args.judge_model_name}")
     print(f"Culture: {args.culture}")
     print(f"Mode: {args.mode}")
     print()
@@ -76,7 +80,8 @@ def main():
     # Initialize evaluator
     evaluator = TriLayerEvaluator(
         culture=args.culture,
-        judge_model=args.judge
+        judge_model=args.judge,
+        judge_model_name=args.judge_model_name
     )
 
     # Run evaluation

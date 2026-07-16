@@ -8,7 +8,7 @@ Implements 10-item checklist evaluation using LLM as judge:
 Uses Claude Opus 4.5 as primary judge for binary Yes/No decisions.
 
 Usage:
-    from scripts.evaluation.checklist_judge import ChecklistJudge
+    from vulca_framework import ChecklistJudge
 
     judge = ChecklistJudge()
 
@@ -18,8 +18,8 @@ Usage:
     # Mode B (reference-free)
     result = judge.evaluate(vlm_critique, culture=culture, artwork_info=info, mode='B')
 
-Author: Claude Code
-Version: 1.0 (2025-11-29)
+Author: VULCA Project Team
+Version: 0.1.0
 """
 
 import json
@@ -168,7 +168,13 @@ class ChecklistResult:
     na_count: int
     score: float  # 0-1 normalized score
     mode: str
+    judge_backend: str
+    judge_model_name: str
     raw_response: str = ""
+
+
+class JudgeBackendError(RuntimeError):
+    """Raised when a requested external judge backend cannot run."""
 
 
 # =============================================================================
@@ -178,14 +184,26 @@ class ChecklistResult:
 class ChecklistJudge:
     """Layer 2 Checklist evaluator using LLM as judge."""
 
-    def __init__(self, judge_model: str = 'claude'):
+    DEFAULT_MODEL_NAMES = {
+        'claude': 'claude-sonnet-4-5-20250929',
+        'gpt5': 'gpt-5-turbo',
+        'fallback': 'rule-based-fallback-v0.1.0',
+    }
+
+    def __init__(self, judge_model: str = 'claude', model_name: str = None):
         """
         Initialize checklist judge.
 
         Args:
-            judge_model: 'claude' or 'gpt5' (default: claude)
+            judge_model: 'claude', 'gpt5', or 'fallback' (default: claude)
+            model_name: Provider model identifier override
         """
+        allowed_models = {'claude', 'gpt5', 'fallback'}
+        if judge_model not in allowed_models:
+            choices = ', '.join(sorted(allowed_models))
+            raise ValueError(f"judge_model must be one of: {choices}")
         self.judge_model = judge_model
+        self.model_name = model_name or self.DEFAULT_MODEL_NAMES[judge_model]
 
     def evaluate(
         self,
@@ -250,6 +268,8 @@ class ChecklistJudge:
             na_count=na_count,
             score=score,
             mode=mode,
+            judge_backend=self.judge_model,
+            judge_model_name=self.model_name,
             raw_response=response
         )
 
@@ -259,53 +279,62 @@ class ChecklistJudge:
             return self._call_claude(prompt)
         elif self.judge_model == 'gpt5':
             return self._call_gpt5(prompt)
-        else:
-            # Fallback to rule-based for testing
+        elif self.judge_model == 'fallback':
+            # Explicit rule-based smoke-test backend.
             return self._fallback_evaluation(prompt)
+        raise ValueError(f"Unsupported judge backend: {self.judge_model}")
 
     def _call_claude(self, prompt: str) -> str:
         """Call Claude API."""
+        api_key = os.environ.get('ANTHROPIC_API_KEY')
+        if not api_key:
+            raise JudgeBackendError(
+                "ANTHROPIC_API_KEY is not set. Use judge_model='fallback' "
+                "explicitly for a local smoke test."
+            )
+
         try:
             import anthropic
-
-            api_key = os.environ.get('ANTHROPIC_API_KEY')
-            if not api_key:
-                print("Warning: ANTHROPIC_API_KEY not set, using fallback")
-                return self._fallback_evaluation(prompt)
-
             client = anthropic.Anthropic(api_key=api_key)
             response = client.messages.create(
-                model="claude-sonnet-4-5-20250929",
+                model=self.model_name,
                 max_tokens=500,
                 messages=[{"role": "user", "content": prompt}]
             )
             return response.content[0].text
 
-        except Exception as e:
-            print(f"Claude API error: {e}, using fallback")
-            return self._fallback_evaluation(prompt)
+        except ImportError as exc:
+            raise JudgeBackendError(
+                "The Anthropic client is not installed. Install the 'anthropic' extra."
+            ) from exc
+        except Exception as exc:
+            raise JudgeBackendError(f"Claude judge request failed: {exc}") from exc
 
     def _call_gpt5(self, prompt: str) -> str:
         """Call GPT-5 API."""
+        api_key = os.environ.get('OPENAI_API_KEY')
+        if not api_key:
+            raise JudgeBackendError(
+                "OPENAI_API_KEY is not set. Use judge_model='fallback' "
+                "explicitly for a local smoke test."
+            )
+
         try:
             import openai
-
-            api_key = os.environ.get('OPENAI_API_KEY')
-            if not api_key:
-                print("Warning: OPENAI_API_KEY not set, using fallback")
-                return self._fallback_evaluation(prompt)
-
             client = openai.OpenAI(api_key=api_key)
             response = client.chat.completions.create(
-                model="gpt-5-turbo",
+                model=self.model_name,
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=500
             )
             return response.choices[0].message.content
 
-        except Exception as e:
-            print(f"GPT-5 API error: {e}, using fallback")
-            return self._fallback_evaluation(prompt)
+        except ImportError as exc:
+            raise JudgeBackendError(
+                "The OpenAI client is not installed. Install the 'openai' extra."
+            ) from exc
+        except Exception as exc:
+            raise JudgeBackendError(f"OpenAI judge request failed: {exc}") from exc
 
     def _fallback_evaluation(self, prompt: str) -> str:
         """
@@ -399,6 +428,8 @@ class ChecklistJudge:
         """Generate detailed report from checklist result."""
         lines = [
             f"=== Checklist Evaluation Report (Mode {result.mode}) ===",
+            f"Judge backend: {result.judge_backend}",
+            f"Judge model: {result.judge_model_name}",
             f"Score: {result.score:.1%} ({result.yes_count} Yes / {result.yes_count + result.no_count} Valid)",
             ""
         ]
@@ -422,7 +453,8 @@ def evaluate_checklist(
     culture: str = 'chinese',
     artwork_info: str = None,
     mode: str = 'A',
-    judge_model: str = 'claude'
+    judge_model: str = 'claude',
+    model_name: str = None
 ) -> Tuple[float, ChecklistResult]:
     """
     Convenience function to evaluate checklist.
@@ -430,7 +462,7 @@ def evaluate_checklist(
     Returns:
         Tuple of (score, full_result)
     """
-    judge = ChecklistJudge(judge_model)
+    judge = ChecklistJudge(judge_model, model_name=model_name)
     result = judge.evaluate(vlm_critique, expert_critique, culture, artwork_info, mode)
     return result.score, result
 
